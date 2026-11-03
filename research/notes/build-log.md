@@ -924,3 +924,17 @@ The build job does **not** add an unapproved browser entitlement. Native-window/
 The supervisor's Rust setup now uses Homebrew's actual `/opt/homebrew/opt/rustup/bin` proxies and `rustup toolchain install stable --profile minimal --default`, not the removed `rustup-init`. Querying rustup 1.29.2's version auto-installed its active stable toolchain (six components); subsequent checks with `RUSTUP_AUTO_INSTALL=0` confirm **Cargo 1.99.1 / rustc 1.99.1**. The job disables that implicit-install behavior and adds the proxy directory only to its own PATH; shell startup files are unchanged. Host Cargo vendors Room's crates; Chromium's hooks still fetch the compiler used for the actual engine.
 
 Resumed supervisor **PID 60064**, same logs/status and 15 GiB reserve. Completed clone/archive/Metal/Cargo steps are reused; next are pinned dependency sync, hooks, engine compilation and Debug apps. **No engine compilation or credential success is claimed at this checkpoint.**
+
+### Attempt 3: dependencies synced; depot_tools Python bootstrap repaired
+
+| Completed step | Time / result |
+|---|---|
+| pinned checkout | **3.9 s**, reused exact source |
+| `gclient sync -D --nohooks --revision src@157.0.8103.26` | **1,197.1 s (19 min 57 s)** |
+| `gclient runhooks` / compiler downloads | **47.0 s**; pinned Clang present |
+| first engine preparation | about **52 s**; **30 patches applied**, branding generated, Rust's **37 crates** vendored; stopped before compilation |
+| source/dependencies footprint | **56 GiB** under `/Users/tadas/chromium`; free disk **38.2 GiB** |
+
+The stop was `python3_bin_reldir.txt not found`: disabling depot_tools self-update for reproducibility also bypassed its initial managed-Python bootstrap. `gclient`'s vpython runtime worked, but the GN wrapper's `python-bin/python3` did not. Ran the official **`depot_tools/ensure_bootstrap`**, which does not update the tools repository. Verified **Python 3.11.8** and **GN 2595 (0035961837fb)** execute; depot_tools remains at `816da11f80777dcf8c10bdaa84df18450dcba12a`.
+
+Local supervisor now ensures that bootstrap explicitly and accepts a guarded `--resume-engine` path when the patched **`room` branch**, synced dependency manifest and Clang are present. This preserves the 30-patch branch (**91d29383a560**, patch 0032) instead of re-syncing/resetting it. Resumed as **PID 76439** with the same log/status, 3 jobs and 15 GiB disk reserve; a temporary `caffeinate -i -w <owned supervisor PID>` prevents idle system sleep only for the job (no persistent power or display settings changed). GN/compilation and app verification are still pending at this checkpoint.
