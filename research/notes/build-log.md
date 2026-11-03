@@ -882,3 +882,22 @@ The Mac mini (24 GB, `ROOM_BUILD_JOBS=6`), from the command line; the user's app
 | incremental: `room_video_overlay.mm` | 26 s (one failed attempt first: an unused private field under `-Werror`) |
 
 | `out/dev` after the Xcode 27.2 update (the SDK changed, so every module-importing object was dirty), with the native PiP controls (patch 0029 rewritten), started 21:51:17 | **13,007 s (3 h 37 min)**, load 38 → 14 |
+
+## 2026-11-03 — Apple Passwords, first local engine build on the fork's Mac
+
+**Started; not yet a successful build.** Mac mini M1 (`Macmini9,1`), 8 CPU cores, **16 GiB RAM**, macOS 27.2 (26B123), Xcode 27.2 (27B52). No Chromium checkout or RoomCore framework/archive found in the development/app locations, and no external volume mounted. Initial APFS free space **112.6 GB / about 105 GiB**, below the normal 200 GB setup allowance. Prior full checkouts measured 113 GB including **66 GB in `src/.git`** (above).
+
+To avoid filling the system disk without violating the full-history rule, this run uses Git's **`--filter=blob:none`**, with every ancestor of the pinned tag retained (no `--depth` or `--no-history`). Googlesource's protocol-v2 advertisement confirms `fetch=filter`. Root `/Users/tadas/chromium`, unmanaged `.gclient`, tag **157.0.8103.26**, remote tag commit **4c20950d2f187a6976cf5e2a1234ca896dcdfd1c**. Dependencies still sync normally. Partial clone's actual footprint and timings are pending; this is not yet a validated low-disk recipe.
+
+| Item | Measurement / configuration |
+|---|---|
+| depot_tools | cloned, **109 MB**; revision `816da11f80777dcf8c10bdaa84df18450dcba12a`; auto-update disabled for this job |
+| Metal compiler preflight | missing Metal Toolchain (`xcrun metal --version` fails); job installs Apple's component |
+| Cargo preflight | absent; job installs rustup + minimal toolchain, without modifying shell startup files |
+| Clean engine | `out/dev`, existing `args/dev.gn`, **ROOM_BUILD_JOBS=3** for 16 GiB; patch series 30, includes 0032 |
+| Background launch | **14:57 GMT**, `nohup /usr/bin/ruby build/apple-passwords/build-engine.rb`, supervisor **PID 91036** |
+| Disk safety | minimum headroom per stage, plus a **15 GiB** reserve checked during commands; stops only the owned command process group on low disk, never deletes user files |
+| Progress / receipts | `build/apple-passwords/engine-build.log`, `engine-build-status.json`, `engine-build.pid` |
+| App packaging | after compile, stage framework and build Debug host/app with explicit ad-hoc signing (this Mac has no original developer's Developer ID identity); verify signatures, do not launch on real state |
+
+The build job does **not** add an unapproved browser entitlement. Native-window/engine checks and Room's existing local password/autofill fixtures can run after packaging; actual iCloud Passwords/passkey transactions still require an approved signing profile. Completion, phase times, footprint and runtime results must be appended before claiming success.
