@@ -32,11 +32,11 @@ Passwords/verification codes use Apple's **iCloud Passwords extension**. Passkey
 3. On the existing build machine, rebuild the engine once (the patch series now includes 0032), then package normally:
 
 ```sh
-ROOM_BUILD_JOBS=6 ROOM_OUT_DIR=out/release ROOM_GN_ARGS=release.gn scripts/roomcore-build.sh
+env -u GOROOT ROOM_BUILD_JOBS=6 ROOM_OUT_DIR=out/release ROOM_GN_ARGS=release.gn scripts/roomcore-build.sh
 scripts/roomcore-package.sh --release
 ```
 
-For a long/clean build, use the background/nohup procedure in `docs/setup.md`; do not edit `//room` while it builds.
+For a long/clean build, use the background/nohup procedure in `docs/setup.md`; do not edit `//room` while it builds. Clear an inherited `GOROOT` only for this build as above: Dawn uses a pinned Go binary, and a Homebrew Go root can silently override its standard library with an incompatible version. Do not change your global Go installation or delete its cache.
 
 4. Sign with the profile. The existing release pipeline inherits the same variable, so no extra release step is needed:
 

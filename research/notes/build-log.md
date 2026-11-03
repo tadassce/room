@@ -946,3 +946,13 @@ The Python bootstrap fix exposed a real idempotence bug in `roomcore-apply.sh`: 
 Fixed the production condition in `scripts/lib/roomcore-gn.sh`: generate when **the build graph is absent OR args differ**, while leaving a successful unchanged graph alone. `scripts/tests/test_roomcore_gn.rb` exercises the actual helper with an isolated fake GN, including the failed-first-run/unchanged-args retry, existing-graph idempotence and changed/missing args: **4 tests / 21 assertions passed**; shell syntax passes. No new Chromium patch or `//room` change.
 
 Actual `roomcore-apply.sh` generation then passed: **36,801 targets from 5,090 files in 8.687 s**, **48.39 s** including the 30-patch verification. `build.ninja` **8.5 MiB**, depfile **549 KiB**. Resumed the real engine stage as supervisor **PID 79945**, preserving the source/dependency cache and disk guard. Generation is proven; engine compilation/package/runtime results are still pending.
+
+### Attempt 5: build executor ran; host Go override isolated
+
+The engine executor reached **1,330 completed actions**, **1 failed**, **84,262 remaining**, after **86.66 s** of executor time (about **126 s** including preparation). The failed action was Dawn/Tint `//third_party/dawn/src/tint:generate_sources`, not a Room C++ diagnostic. Error: `compile: version "go1.27.3" does not match go tool version "go1.26.6"`.
+
+Cause verified: inherited **`GOROOT=/opt/homebrew/opt/go/libexec`** pointed Dawn's pinned **Go 1.26.6** binary at the host **Go 1.27.3** standard library. With that override removed, the pinned binary reports its correct root `third_party/dawn/tools/golang/mac-arm64` and version. The owned job now removes host root/cross overrides only in its environment, disables user Go config and auto-toolchain selection, and uses Go build/module caches under `build/apple-passwords/`. No global Go installation/configuration or shared cache is changed/deleted.
+
+Re-ran the **exact failing generator** with bundled Python and the isolated pinned Go: **success in 9.74 s**; expected `gen/src/tint/cmd/bench/enums_core_bench.cc` exists (**37 KiB**). Log `build/apple-passwords/dawn-generator.log`. The adoption guide now scopes `env -u GOROOT` to its build command.
+
+Resumed as supervisor **PID 85836**, cached completed actions retained, 3 jobs and 15 GiB reserve. Free disk at failure **37.1 GiB**. Full engine/app compilation, signatures and runtime/credential checks remain pending.
