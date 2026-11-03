@@ -69,6 +69,7 @@ CI=1 xcodebuild -project Room.xcodeproj -scheme Room -configuration Debug \
   CODE_SIGNING_ALLOWED=NO build test
 xcodegen
 /usr/bin/ruby scripts/tests/test_passkeys_signing.rb
+/usr/bin/ruby scripts/tests/test_roomcore_gn.rb
 ```
 
 Run the window tier with the normal `Room` scheme and `CI`/`ROOM_CI` unset; run the usual engine baseline and password/extension checks after packaging. Verify an opted-in signed app without changing it using `/usr/bin/ruby scripts/passkeys-signing.rb --verify /absolute/path/to/Room.app`.
@@ -87,6 +88,6 @@ On an **approved Debug build, with throwaway Room state**, verify:
 
 ## Verification status of this contribution
 
-The source-only fork machine has no Chromium checkout or staged RoomCore framework, and no approved Room profile. Swift/package and local CI results, signing tests, patch-application checks and remaining engine/credential checks are recorded in `docs/progress.md`. **An engine compile and a successful real Apple Passwords/passkey transaction must still be demonstrated on the entitled build machine.**
+The initial handoff was prepared before this fork machine had a Chromium checkout or staged framework. A real local build is now in progress: the exact pinned source and dependencies are cached, and GN generation has passed; no approved Room profile is available. Swift/package and local CI results, signing/build-script tests and remaining engine/credential checks are recorded in `docs/progress.md`. **A successful engine/app build and a real Apple Passwords/passkey transaction must still be demonstrated before calling the integration fixed.**
 
 Detailed system evidence: `research/notes/apple-passwords.md`.
