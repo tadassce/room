@@ -56,6 +56,7 @@
 #include "skia/ext/skia_utils_mac.h"
 #include "ui/base/base_window.h"
 #include "ui/gfx/geometry/rect.h"
+#include "ui/gfx/native_ui_types.h"
 
 namespace {
 
@@ -575,6 +576,20 @@ class DevToolsCommandClient : public content::DevToolsAgentHostClient {
 @end
 
 namespace room {
+
+// patches/0032-webauthn-native-window-hook.patch. Apple's passkey discovery
+// needs the page's actual NSWindow, not Room's separate Views modal anchor.
+extern gfx::NativeWindow (*g_webauthn_window_hook)(content::WebContents*);
+
+void InstallWebAuthnWindowHook() {
+  g_webauthn_window_hook = +[](content::WebContents* contents) {
+    RoomWebContents* wrapper = [RoomWebContents room_existingWrapperFor:contents];
+    // Do not borrow NSApp.mainWindow or a browser's last active window: a
+    // moved page, Peek or a popup must authorize in its own current window.
+    return wrapper ? gfx::NativeWindow(wrapper.nativeView.window)
+                   : gfx::NativeWindow();
+  };
+}
 
 // patches/0028-devtools-update-hook.patch
 extern void (*g_devtools_update_hook)(content::WebContents*);

@@ -1,0 +1,41 @@
+Room: the real AppKit parent for Apple's passkey authorization sheet.
+
+Chromium 157 configures iCloud passkey discovery only when it can find an
+NSWindow through a Views Widget. Room embeds its pages in AppKit; its Views
+modal anchor is a separate child window, not the page's parent. Ask //room
+for a native parent before the existing Views lookup. Non-Room pages and
+detached pages return null and keep Chromium's path. Nothing changes RP ID,
+origin validation, credential selection, cancellation or entitlement checks.
+
+Phase 6.6, 2026-11-03. //room: room/core/room_web_contents_tools.mm.
+diff --git a/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc b/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
+--- a/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
++++ b/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
+@@ -110,6 +110,12 @@
+ #if BUILDFLAG(IS_MAC)
+ #include "chrome/browser/webauthn/chrome_authenticator_request_delegate_mac.h"
+ #include "device/fido/mac/credential_metadata.h"
+ #include "ui/views/widget/widget.h"
++
++namespace room {
++// Room: the page's actual AppKit window, or null for the normal Views path.
++gfx::NativeWindow (*g_webauthn_window_hook)(content::WebContents*) = nullptr;
++}  // namespace room
++
+ #endif
+ 
+@@ -1413,6 +1419,14 @@ void ChromeAuthenticatorRequestDelegate::ConfigureNSWindow(
+     return;
+   }
+ 
++  if (room::g_webauthn_window_hook) {
++    const gfx::NativeWindow window =
++        room::g_webauthn_window_hook(web_contents);
++    if (window) {
++      discovery_factory->set_nswindow(window);
++      return;
++    }
++  }
+   // Not all contexts in which this code runs have a BrowserWindow.
+   // Notably the dialog containing a WebContents that is used for signing
+   // into a new profile does not. Thus the NSWindow is fetched more directly.

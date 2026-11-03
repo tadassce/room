@@ -101,6 +101,9 @@ NSArray<NSData*>* DERChain(const net::X509Certificate* cert);
 // Points Chrome's DevTools update hook (patches/0028) at the inspected page's
 // wrapper (room_web_contents_tools.mm, 5.10). Once, at startup.
 void InstallDevToolsHook();
+// Apple's passkey discovery gets the Room page's actual AppKit window
+// (patches/0032), without changing Chromium's WebAuthn security checks.
+void InstallWebAuthnWindowHook();
 }  // namespace room
 
 #endif  // ROOM_CORE_ROOM_WEB_CONTENTS_INTERNAL_H_
