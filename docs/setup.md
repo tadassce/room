@@ -251,6 +251,16 @@ go), Help ▸ Restore Sidebar…, pick the newest backup, Restore; read back:
 the space is in the footer again, the toast "Sidebar restored from …",
 and a "before restore" file in `Backups/`.
 
+## 5b. Apple Passwords and native passkeys
+
+Quickstart and maintainer handoff: `docs/apple-passwords.md`; signed system-helper evidence: `research/notes/apple-passwords.md`.
+
+Apple's browser/passkey capability is managed: an eligible organization's Account Holder must obtain approval and an exact-App-ID macOS Developer ID provisioning profile. Fork owners can apply under their own account; the original developer is not required. Release and Debug App IDs need separate profile coverage.
+
+Once approved, set `ROOM_PASSKEYS_PROFILE=/absolute/path/to/Room.provisionprofile` when running `scripts/roomcore-sign.sh`, `scripts/sign-and-notarize.sh` or the existing release pipeline. The signer validates the profile, embeds it, adds only the required main-app entitlements, and checks the actual signed certificate against the profile. `ROOM_SIGN_IDENTITY` still selects your own certificate. No profile or private key goes in git. Default builds keep the original entitlements and register no Apple helper; a stale embedded profile is refused rather than silently shipped.
+
+Patch 0032 and the `//room` window hook require a RoomCore rebuild. Do not claim credential support from a successful compile or host-file check: run the entitled extension/passkey checks in `docs/apple-passwords.md` before shipping.
+
 ## 6. Reference material (optional)
 
 `research/repos/` is gitignored. Recreate what a task needs:

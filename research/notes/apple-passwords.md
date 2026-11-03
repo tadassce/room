@@ -1,8 +1,24 @@
 # Apple Passwords in Room — diagnosis and implementation gate
 
-2026-11-03. User report: `Screenshot 2026-11-02 at 21.34.30.png`, iCloud Passwords “couldn’t connect to a helper application”. Investigation on macOS 27.2 (26B123), Xcode 27.2, this checkout at `cacc82b`. **Not fixed; no runtime or signing changes made.**
+2026-11-03. User report: `Screenshot 2026-11-02 at 21.34.30.png`, iCloud Passwords “couldn’t connect to a helper application”. Investigation on macOS 27.2 (26B123), Xcode 27.2, this checkout at `cacc82b`. **Initial diagnosis: not fixed; no runtime or signing changes were made in that first step.** The follow-up below prepares the code/signing changes without claiming a working entitled build.
 
-## Findings
+## Follow-up: source preparation, 2026-11-03
+
+The user correctly asked for a useful contribution rather than stopping at the approval gate. Prepared `Integration.ApplePasswords` (entitlement-gated system-host registration and Privacy status), patch 0032 with the page's actual AppKit window, and `ROOM_PASSKEYS_PROFILE` signing (strict profile/identity validation, minimal main-app entitlements, embedding, actual signer-certificate verification). Default entitlements remain unchanged. A fork owner can obtain approval for their own identity; original-developer involvement is not a prerequisite.
+
+Handoff and exact adoption commands: `docs/apple-passwords.md`. No signing keys or account credentials need to be shared.
+
+Measurements/checks on this source-only machine:
+
+- Local CI spec, including the rerun before push: **TEST SUCCEEDED, 753 tests** (`build/apple-passwords/ci.log`, `ci-final.log`; count includes Infra's singular “1 test” summary); the normal project regenerated afterwards.
+- Integration package: **43 tests**, passed; signing rules: **26 tests / 123 assertions**, passed on system Ruby. A production certificate-extraction probe against Apple's signed system helper caught incorrect `codesign --extract-certificates` optional-argument syntax; fixed to `--extract-certificates=<prefix>`, with a regression test. Actual extraction now returns the helper's **1,263-byte public signer certificate**.
+- Read-only Swift probe: production Security validation accepts the installed Apple helper, and an unentitled process leaves its nonexistent scratch engine root untouched (`build/apple-passwords/runtime-probe.log`). No helper launched or credentials requested.
+- Patch 0032 applies and reverse-checks against the pinned upstream file (`157.0.8103.26`, git blob `6c8b88832830ce1120094ce6f6e43d84fc02adb2`). **Not an engine compile.**
+- Window tier run: one failure, reverse Tab in `AccessibilityAuditTests.swift:204`; independently reproduced by `swift test --package-path Packages/Palette --filter KeyViewLoopTests`. That suite and all its package dependencies have no source changes in this contribution (and do not depend on Integration). Forward/default order passes. Recorded as B-161, not hidden or attributed to Apple Passwords.
+
+Still unverified: full RoomCore compilation/linking, actual approved-profile signing/notarization, extension handshake/unlock/fill, and native passkey transactions. These need the entitled build machine. The complete Apple Passwords task remains open.
+
+## Initial findings
 
 ### 1. Apple's helper enforces which browser may launch it
 
@@ -93,4 +109,4 @@ Required checks on the session's Debug app and throwaway state:
 - No credentials in logs, snapshots or diagnostics. Real accounts, iCloud unlock and authorization prompts remain the user's checks.
 - Local CI spec and window tier, engine incremental/package/baseline and the actual Developer ID release before claiming success.
 
-This machine has no `build/RoomCore` stage or Chromium checkout, and only a development signing identity from a different team than Room's release identity. Do not claim engine compilation or credential verification. `CI=1 swift test --package-path Packages/Integration` passed **36 tests in 9 suites** (baseline only; no code changed), log `build/apple-passwords/integration-baseline.log`. XcodeGen 2.46.0 installed through Homebrew for subsequent local CI; the full CI spec was not run and nothing was pushed.
+At the initial diagnosis this machine had no staged RoomCore framework or Chromium checkout, and only a development signing identity from a different team than Room's release identity. The initial `CI=1 swift test --package-path Packages/Integration` baseline passed **36 tests in 9 suites** (`build/apple-passwords/integration-baseline.log`); XcodeGen 2.46.0 was installed. Full CI had not run at that point. See the follow-up above for the later implementation checks; engine compilation and credential verification remain unavailable.
