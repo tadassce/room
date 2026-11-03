@@ -909,3 +909,18 @@ The build job does **not** add an unapproved browser entitlement. Native-window/
 - Supervisor **91036 exited**, no compiler ran, free disk **96.2 GiB**. Worktree contained **only `.git`**; no user/source changes to overwrite. Existing history is retained, not downloaded again.
 - Recovery supervisor **52351**, same append-only `engine-build.log` and atomic status JSON. New local helper `materialize-source.rb` fetches GitHub's archive for the exact pinned tag (HTTP 200 availability checked), validates archive paths, imports files/blobs into the proven-empty worktree, and requires `git write-tree` to equal the already-cached pinned tag's tree before continuing. Symlink/executable modes are checked by Git too; the full commit history remains intact. Only this job's archive is removed after verification. This avoids repeating the failed single huge lazy-fetch request.
 - The 15 GiB disk reserve and all subsequent compiler/package/signature stages remain in force. Exact-tree recovery, dependency sync and compilation **not yet reported successful** at this checkpoint.
+
+### Attempt 2: exact source recovered; host Rust setup repaired
+
+| Completed step | Time / result |
+|---|---|
+| source snapshot recovery | **1,098.2 s (18 min 18 s)**; archive **1,465,575,658 bytes**, SHA-256 `ef7b1a2dcae81f9adecf1bacc832046edfd085239f320cd6e1fdf73597d0b0d0`, 551,543 archive entries |
+| exact source verification | index tree **513ffd42ef6954bc38c6afc263b53575aba1f521**, identical to pinned commit `4c20950d2f187a6976cf5e2a1234ca896dcdfd1c`; independently rechecked cached diff; receipt `source-snapshot-receipt.json` |
+| pinned-tag checkout, after recovery | **2.6 s** (no history or source re-download) |
+| Metal toolchain install | **26.1 s**; `xcrun metal --version` now reports Apple metal 32023.922 |
+| Homebrew rustup install | **6.6 s**, version 1.29.2; the local supervisor then failed because this formula no longer provides `rustup-init` |
+| source footprint | **13 GiB**, including **7.8 GiB `.git`**; free disk 86.9 GiB before host Rust installation, about 85 GiB after |
+
+The supervisor's Rust setup now uses Homebrew's actual `/opt/homebrew/opt/rustup/bin` proxies and `rustup toolchain install stable --profile minimal --default`, not the removed `rustup-init`. Querying rustup 1.29.2's version auto-installed its active stable toolchain (six components); subsequent checks with `RUSTUP_AUTO_INSTALL=0` confirm **Cargo 1.99.1 / rustc 1.99.1**. The job disables that implicit-install behavior and adds the proxy directory only to its own PATH; shell startup files are unchanged. Host Cargo vendors Room's crates; Chromium's hooks still fetch the compiler used for the actual engine.
+
+Resumed supervisor **PID 60064**, same logs/status and 15 GiB reserve. Completed clone/archive/Metal/Cargo steps are reused; next are pinned dependency sync, hooks, engine compilation and Debug apps. **No engine compilation or credential success is claimed at this checkpoint.**
