@@ -119,6 +119,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     let inbox = URLInbox()
     /// Whether Room is the default browser, and the request (2.8b).
     let defaultBrowser = DefaultBrowser()
+    /// Apple's system native host, registered only in an entitled build's selected engine root.
+    let applePasswords = ApplePasswords()
     /// Sparkle and the crash reports behind their opt-ins (ROADMAP 2.8 task 5); nil while the store is not open.
     private(set) var optIns: OptInServices?
     /// A downloaded update that installs on quit (5.13): every window's sidebar shows its banner.
@@ -1666,7 +1668,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         guard let store else { return }
         if settingsWindow == nil {
             let services = SettingsServices(
-                defaultBrowser: defaultBrowser, crashReportsUnavailable: optIns?.crashReportsUnavailable ?? true,
+                defaultBrowser: defaultBrowser, applePasswords: applePasswords,
+                crashReportsUnavailable: optIns?.crashReportsUnavailable ?? true,
                 checkForUpdates: { [weak self] in self?.checkForAppUpdates(nil) },
                 canCheckForUpdates: { [weak self] in self?.optIns?.canCheckForUpdates ?? false },
                 extensions: { [weak self] in self?.extensions },

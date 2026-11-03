@@ -64,8 +64,14 @@ do {
     #else
     let usesSystemKeychain = true
     #endif
+    let userDataDirectory = try AppPaths.ensureDirectory(engineDirectory)
+    #if ROOM_ENGINE_ROOMCORE
+    // Apple's helper is found through Chromium's per-engine NativeMessagingHosts.
+    // No host is registered in unapproved builds; Debug/throwaway roots stay isolated.
+    delegate.applePasswords.prepare(engineDirectory: userDataDirectory)
+    #endif
     let configuration = EngineConfiguration(
-        userDataDirectory: try AppPaths.ensureDirectory(engineDirectory),
+        userDataDirectory: userDataDirectory,
         usesSystemKeychain: usesSystemKeychain,
         features: LaunchSettings.engineFeatures(stateDirectory: AppDelegate.stateDirectory),
         // Crashpad's handler starts with it; whether it sends is the user's opt-in (6.3).

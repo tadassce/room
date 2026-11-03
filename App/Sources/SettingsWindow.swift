@@ -147,6 +147,7 @@ private final class SettingsTabsController: NSTabViewController {
 /// What Settings reaches beyond the settings values (2.8b).
 struct SettingsServices {
     let defaultBrowser: DefaultBrowser
+    let applePasswords: ApplePasswords
     /// No crash collector in this build: the switch is kept, nothing can be sent.
     let crashReportsUnavailable: Bool
     let checkForUpdates: () -> Void
@@ -298,6 +299,24 @@ private struct SettingsSectionView: View {
         }
         .sheet(isPresented: $sitePermissions) {
             SitePermissionsSheet(sidebar: services.sidebar, profiles: services.profiles) { sitePermissions = false }
+        }
+        Section {
+            LabeledContent {
+                Button("Open Passwords") {
+                    if let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Passwords") {
+                        NSWorkspace.shared.openApplication(at: app, configuration: .init())
+                    }
+                }
+            } label: {
+                Text("Apple Passwords")
+                Text(services.applePasswords.state.title)
+            }
+            Text(services.applePasswords.state.detail)
+                .font(.callout).foregroundStyle(.secondary)
+            Button("Set Up Autofill…") { services.profiles.openPage(ApplePasswords.extensionHelpURL) }
+                .disabled(services.applePasswords.state != .registered)
+        } header: {
+            Text("Passwords and passkeys")
         }
         Section {
             Toggle(isOn: binding(\.crashReports)) {
@@ -635,7 +654,7 @@ struct ExtensionsSettingsView: View {
 /// Settings ▸ Extensions' line under the list (4.5's statements; one line since 5.7a).
 enum ExtensionStatements {
     static let footer = "Extensions make their own requests (their updates, their own servers). "
-        + "Native messaging to desktop apps and side panels do not work in Room."
+        + "Apple Passwords setup is in Privacy. Other desktop-app helpers are not automatically registered; side panels are not supported."
 
     /// The bytes of every file under `directory` (nonisolated: Settings runs it off the main thread).
     nonisolated static func directorySize(_ directory: URL) -> Int64 {
