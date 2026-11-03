@@ -183,9 +183,6 @@ fi
 # over them (B-103, 5.2b; room/branding/tools/install_theme.sh).
 "$ROOMCORE/room/branding/tools/install_theme.sh" "$SRC"
 
-mkdir -p "$OUT"
-if ! cmp -s "$ARGS_FILE" "$OUT/args.gn"; then
-  cp "$ARGS_FILE" "$OUT/args.gn"
-  gn gen "$OUT"
-fi
+source "$REPO/scripts/lib/roomcore-gn.sh"
+roomcore_ensure_gn "$ARGS_FILE" "$OUT"
 echo "ready: $SRC on branch $(git branch --show-current) ($(git rev-parse --short HEAD)), $OUT"
