@@ -9,7 +9,21 @@
 # Notarization needs a stored credential profile, created once by the user:
 #   xcrun notarytool store-credentials room --apple-id <id> --team-id N56PMJ99UT
 # Usage: scripts/sign-and-notarize.sh [path/to/Room.app] [--no-notarize]
+# ROOM_PASSKEYS_PROFILE=/absolute/approved.provisionprofile opts the main app
+# into Apple's managed browser passkey capability. Approval is required first;
+# the profile must cover this app's bundle ID and actual signing certificate.
 set -euo pipefail
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  printf '%s\n' \
+    'Usage: scripts/sign-and-notarize.sh [path/to/Room.app] [--no-notarize]' \
+    'ROOM_SIGN_IDENTITY: Developer ID Application identity (defaults to Room’s team)' \
+    'ROOM_NOTARY_PROFILE: stored notarytool credential profile (default: room)' \
+    'ROOM_PASSKEYS_PROFILE: absolute path to an Apple-approved macOS passkeys profile' \
+    'Without passkeys opt-in, an existing embedded profile must be removed explicitly.' \
+    'Verify an opted-in signed app: ruby scripts/passkeys-signing.rb --verify <Room.app>'
+  exit 0
+fi
 
 APP="${1:-build/Release/Room.app}"
 NOTARIZE=1
@@ -30,6 +44,19 @@ t0=$(now)
 
 FW="$APP/Contents/Frameworks/RoomCore.framework"
 [[ -d "$FW" ]] || { echo "no RoomCore.framework in $APP (the engine-free CI app is not signed)" >&2; exit 1; }
+
+# Only explicit opt-in changes the main app entitlements. Never add this managed
+# capability to helper signatures or reuse a profile left by an earlier release.
+PASSKEYS_TOOL="$ROOT/scripts/passkeys-signing.rb"
+if [[ -n "${ROOM_PASSKEYS_PROFILE:-}" ]]; then
+  SIGNING_TMP="$(mktemp -d "${TMPDIR:-/tmp}/room-passkeys-signing.XXXXXX")"
+  trap 'rm -rf "$SIGNING_TMP"' EXIT
+  /usr/bin/ruby "$PASSKEYS_TOOL" --prepare "$APP" "$ENT_APP" "$ROOM_PASSKEYS_PROFILE" "$SIGNING_TMP/Room.entitlements"
+  ENT_APP="$SIGNING_TMP/Room.entitlements"
+else
+  /usr/bin/ruby "$PASSKEYS_TOOL" --prepare "$APP" "$ENT_APP"
+fi
+
 FWV="$FW/Versions/$(readlink "$FW/Versions/Current")"
 HELPERS="$FWV/Helpers"
 
@@ -89,6 +116,11 @@ for framework in "$APP"/Contents/Frameworks/*.framework; do
 done
 find "$APP/Contents/MacOS" -name '*.dylib' -print0 | while IFS= read -r -d '' lib; do sign "$lib"; done
 sign --entitlements "$ENT_APP" "$APP"
+# A named identity can resolve to the wrong/renewed certificate. Fail before
+# notarization (also with --no-notarize) unless the actual leaf is in the profile.
+if [[ -n "${ROOM_PASSKEYS_PROFILE:-}" ]]; then
+  /usr/bin/ruby "$PASSKEYS_TOOL" --verify "$APP"
+fi
 t1=$(now)
 echo "signed in $(perl -e "print $t1 - $t0") s"
 

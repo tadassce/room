@@ -20,6 +20,9 @@ Engine/roomcore/out/
 # Per-machine script settings (see local.env.example)
 local.env
 
+# Apple-approved signing profiles belong on the build machine, not in source.
+*.provisionprofile
+
 # Generated import fixtures (make-large.py, B-84): ~17 MB, made on demand
 research/spikes/phase-4.3/generated/
 
