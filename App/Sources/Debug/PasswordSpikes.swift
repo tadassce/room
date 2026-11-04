@@ -309,6 +309,9 @@ extension SpikeRunner.Context {
 
     /// ⌘T as a typed key: the palette opens (within 2 s), Esc closes it.
     private func paletteCheck() async -> String {
+        // SpikeSession counts Cmd-T instead of opening the palette by default.
+        // This check needs the real palette actions, as the palette spikes do.
+        restorePaletteHooks()
         let keyBefore = keyWindowName
         sendKey(window, characters: "t", keyCode: 17, modifiers: [.command])
         let opened = await waitUntil(2) { AppDelegate.current?.palette?.isOpen ?? false }
