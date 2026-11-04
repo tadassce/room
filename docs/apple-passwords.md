@@ -72,7 +72,15 @@ xcodegen
 /usr/bin/ruby scripts/tests/test_roomcore_gn.rb
 ```
 
-Run the window tier with the normal `Room` scheme and `CI`/`ROOM_CI` unset; run the usual engine baseline and password/extension checks after packaging. Verify an opted-in signed app without changing it using `/usr/bin/ruby scripts/passkeys-signing.rb --verify /absolute/path/to/Room.app`.
+Run the window tier with the normal `Room` scheme and `CI`/`ROOM_CI` unset; run the usual engine baseline and password/extension checks after packaging. The console must be unlocked for UI-sensitive checks; a wrapper's zero exit status is not proof when its spike reports missing bubbles/popups or `window_main: false`. Verify an opted-in signed app without changing it using `/usr/bin/ruby scripts/passkeys-signing.rb --verify /absolute/path/to/Room.app`.
+
+For the default **unapproved Debug app over a `dev.gn` framework** (`room_enable_spikes=true`), run:
+
+```sh
+scripts/apple-passwords-check.rb /absolute/path/to/a/fresh/evidence-directory
+```
+
+This bounded check uses throwaway state, a loopback fixture and the Debug app only. It checks the real startup entitlement gate and calls the **actual installed production window callback** for requesting pages in two windows, detached/reattached and moved. The private diagnostic is absent from release engines. It neither launches Apple's helper nor requests a credential; it is not an end-to-end passkey test.
 
 On an **approved Debug build, with throwaway Room state**, verify:
 
@@ -84,10 +92,10 @@ On an **approved Debug build, with throwaway Room state**, verify:
 
 ## Message you can send the original developer
 
-> I traced the iCloud Passwords helper failure: Apple's signed parent-launch constraints require the managed browser/passkey entitlement (or Apple's browser/team allowlist). Room currently has neither the entitlement nor native-host registration. I've prepared host registration, the AppKit window hook for Chromium passkeys, approved-profile opt-in signing, tests and a setup guide. Could you request Apple's macOS browser passkey capability for Room's release App ID (and Debug ID for testing), then provide the resulting profile **on your build machine**? No private-key sharing is needed; the existing signing pipeline takes `ROOM_PASSKEYS_PROFILE`. Please rebuild RoomCore with patch 0032 and run the entitled credential checks before calling the issue fixed.
+> I traced the iCloud Passwords helper failure: Apple's signed parent-launch constraints require the managed browser/passkey entitlement (or Apple's browser/team allowlist). Room currently has neither the entitlement nor native-host registration. I've implemented host registration, the AppKit window hook for Chromium passkeys, approved-profile opt-in signing, tests and a setup guide, and built the patched engine and Debug apps. Could you request Apple's macOS browser passkey capability for Room's release App ID (and Debug ID for testing), then provide the resulting profile **on your build machine**? No private-key sharing is needed; the existing signing pipeline takes `ROOM_PASSKEYS_PROFILE`. Please rebuild RoomCore with patch 0032 and run the entitled credential checks before calling the issue fixed.
 
 ## Verification status of this contribution
 
-The initial handoff was prepared before this fork machine had a Chromium checkout or staged framework. A real local build is now in progress: the exact pinned source and dependencies are cached, and GN generation has passed; no approved Room profile is available. Swift/package and local CI results, signing/build-script tests and remaining engine/credential checks are recorded in `docs/progress.md`. **A successful engine/app build and a real Apple Passwords/passkey transaction must still be demonstrated before calling the integration fixed.**
+The patched component RoomCore engine and both ad-hoc-signed Debug apps **built successfully** on this fork machine (2026-11-04): engine compilation/linking **6 h 39 min 48.9 s**, with three jobs on an M1 / 16 GiB. Both app signatures verify. Real navigation/back/forward/reload and three ten-page quits passed, with no new crash reports or leftover helpers. The initial local-password/autofill UI measurement was inconclusive because macOS was locked; it is not counted as a pass. No approved Room profile is available. The actual installed window callback passed two-window, detach/reattach and page-move checks; the unapproved startup gate/manifest absence passed, with zero non-page network hosts. Local CI was rerun: **753 tests passed**. Remaining UI/credential results are in `docs/progress.md`. **A real Apple Passwords/passkey transaction still must be demonstrated before calling the integration fixed.**
 
 Detailed system evidence: `research/notes/apple-passwords.md`.

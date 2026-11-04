@@ -102,6 +102,7 @@ enum SpikeRunner {
         case "skipped": await context.skippedStepsChecks()
         case "windows": await context.windowsChecks()
         case "incognito": await context.incognitoChecks()
+        case "applepasswords": await context.applePasswordsChecks()
         case "passwords": await context.passwordsChecks()
         case "autofill": await context.autofillChecks()
         case "session": await context.sessionChecks()

@@ -95,6 +95,15 @@
 #import "room/core/room_profile_internal.h"
 #import "room/core/room_web_contents_internal.h"
 
+#if BUILDFLAG(ROOM_ENABLE_SPIKES)
+#include "components/web_modal/web_contents_modal_dialog_host.h"
+
+namespace room {
+// The real patch-0032 callback installed at startup, not a test replacement.
+extern gfx::NativeWindow (*g_webauthn_window_hook)(content::WebContents*);
+}  // namespace room
+#endif
+
 @interface RoomBrowser ()
 - (void)room_activeContentsChanged:(content::WebContents*)contents;
 - (void)room_windowWillClose;
@@ -642,6 +651,39 @@ RoomWindowOpenDisposition ToRoomDisposition(WindowOpenDisposition disposition,
     default:
       return @NO;
   }
+}
+
+// Probe the requesting page, not the active tab (a split/inactive page can
+// request WebAuthn too). No Apple API or credential transaction is invoked.
+- (NSNumber*)roomSpikeWebAuthnWindow:(RoomWebContents*)page {
+  if (!_browser || ![page isKindOfClass:RoomWebContents.class] ||
+      page.room_browser != self ||
+      ![[NSProcessInfo processInfo].arguments containsObject:@"-RoomSpike"]) {
+    return @(-1);
+  }
+  auto* contents = page.room_webContents;
+  if (!contents || contents->GetVisibleURL().host() != "127.0.0.1") {
+    return @(-1);
+  }
+  NSWindow* expected = page.nativeView.window;
+  const bool installed = room::g_webauthn_window_hook != nullptr;
+  NSWindow* resolved = installed
+      ? room::g_webauthn_window_hook(contents).GetNativeNSWindow() : nil;
+  auto* window =
+      static_cast<RoomBrowserWindow*>(BrowserWindow::FromBrowser(_browser));
+  auto* modal = window->GetWebContentsModalDialogHostFor(contents);
+  NSWindow* anchor = modal ? modal->GetHostView().GetNativeNSView().window : nil;
+  const bool empty_is_nil = installed &&
+      !room::g_webauthn_window_hook(nullptr).GetNativeNSWindow();
+  // Installed, attached, exact requesting window, Browser's host, not the
+  // separate Views anchor, and no global-window fallback for no wrapper.
+  const int flags = (installed ? 1 : 0) | (expected ? 2 : 0) |
+      (installed && resolved == expected ? 4 : 0) |
+      (resolved && resolved == _window ? 8 : 0) |
+      (resolved && anchor && resolved != anchor ? 16 : 0) |
+      (empty_is_nil ? 32 : 0);
+  LOG(WARNING) << "Room UI probe WebAuthn window flags=" << flags;
+  return @(flags);
 }
 
 // Bounded fixture actions use Chrome's real completion paths, not synthetic
