@@ -36,7 +36,11 @@ public enum KeyViewLoop {
             var found: [NSView] = []
             func walk(_ view: NSView) {
                 guard !view.isHidden, view.alphaValue > 0, !region.excluding.contains(where: { $0 === view }) else { return }
-                if view.canBecomeKeyView, !found.contains(where: { $0 === view }) { found.append(view) }
+                // Scroll containers forward focus into their document view.
+                // Listing them as separate stops makes reverse Tab return to
+                // the same outline instead of its predecessor (B-161).
+                let isScrollContainer = view is NSScrollView || view is NSClipView
+                if !isScrollContainer, view.canBecomeKeyView, !found.contains(where: { $0 === view }) { found.append(view) }
                 guard !isOpaque(view) else { return }
                 for subview in view.subviews { walk(subview) }
             }
