@@ -14,7 +14,7 @@ Apple's requirements:
 
 https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.web-browser.public-key-credential
 
-For an independently distributed fork, register your **own unique bundle identifier**, update the app identity in `xcodegen/base.yml` and RoomCore's identity in `Engine/roomcore/room/branding/BRANDING`, and separate its storage identities in `Packages/Infra/Sources/Infra/AppPaths.swift` so it never opens an installed original Room's state. Use your own signing/update configuration (see `docs/setup.md`). Do not use the original project's update feed or signing keys for your own releases. This integration reads the actual built app's bundle ID and signer; it does not hard-code the original developer's team into the new signing checks.
+For an independently distributed fork, register your **own unique bundle identifier**, update the app identity in `xcodegen/base.yml` and RoomCore's identity in `Engine/roomcore/room/branding/BRANDING`, and separate its storage identities in `Packages/Infra/Sources/Infra/AppPaths.swift` so it never opens an installed original Room's state. Adapt the verification script's explicit Debug-ID guard in `scripts/apple-passwords-check.rb` to your own Debug ID as well; never point it at a release app. Use your own signing/update configuration (see `docs/setup.md`). Do not use the original project's update feed or signing keys for your own releases. This integration reads the actual built app's bundle ID and signer; it does not hard-code the original developer's team into the new signing checks.
 
 ## What this change supplies
 
